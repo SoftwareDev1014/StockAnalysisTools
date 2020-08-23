@@ -152,7 +152,7 @@ export default {
           { text: 'Market', value: 'market', width: '100px' },
           { text: 'Big Category', value: 'big_category', width: '150px' },
           { text: 'Small Category', value: 'small_category', width: '180px' },
-          // { text: 'Stock Price', value: 'stock_price', width: '150px' },
+          { text: 'Stock Price', value: 'analysis_result.0.current_stock.close', width: '150px' },
 
           { text: 'Updated At', value: 'updated_at', width: '150px' },
 
