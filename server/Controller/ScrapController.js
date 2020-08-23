@@ -20,7 +20,7 @@ class ScrapController {
 
     async init() {
         //await this.GetCompaniesTimeSeries()
-        await this.CalculateData()
+        //await this.CalculateData()
         //await this.GetTags()
     }
 
@@ -93,18 +93,33 @@ class ScrapController {
         //console.log(data)
         data.days = parseInt(data.days)
         let company_detail = await this.db.collection('companies').findOne({_id: data.company_id})
+        // console.log(series.length)
+        let series_ids=[]
+        let c_date=new Date();
+        for (let day=0;day<=data.days;day++){
+            let temp_date=new Date()
+            temp_date.setDate(c_date.getDate()-day)
+            let month=(temp_date.getMonth()+1)
+            if (month/10<1){
+                month='0'+month
+            }
+            series_ids.push(data.company_id+'_'+temp_date.getFullYear()+'/'+month+'/'+temp_date.getDate()+' 00:00:00')
+        }
         let series = await this.db.collection('series').aggregate([
             {
-                $match: {company_id: data.company_id}
+                $match: {_id: {$in:series_ids}}
             },
             {
-                $sort: {"dateTime": -1}
-            },
-            {$limit: data.days},
-            {
-                $sort: {"dateTime": 1}
+                $sort: {"dateTime_str": 1}
             },
         ]).toArray()
+        /*return {
+            company_id:data.company_id,
+            series_ids,
+            days:data.days,
+            series
+        }*/
+        //console.log('test')
         let rsp = 0
         let psp = 0
         let rsi = 0
@@ -143,6 +158,7 @@ class ScrapController {
         }
         return {
             company_detail,
+            //series_ids,
             series,
             rsp: rsp,
             bollinger_band: bollinger_band.toFixed(2),
@@ -159,40 +175,22 @@ class ScrapController {
         let days = [1, 3, 7, 14, 28, 60, 90]
         let result = []
         let analysis_result = {}
+        let series
         for (const day of days) {
             let temp = await this.GetAnalysis({company_id, days: day})
             temp.days = day
             result.push(temp)
             // delete temp.company_detail
+            series=temp.series
             delete temp.series
             delete temp.company_detail
             analysis_result["day_" + day] = temp
         }
         try {
-            //console.log(company_id)
-            let series = await this.db.collection('series').aggregate([
-                {
-                    $match: {company_id: company_id}
-                },
-                {
-                    $sort: {"dateTime": -1}
-                },
-                {$limit: 1},
-                {
-                    $sort: {"dateTime": -1}
-                },
-            ]).toArray()
             let updated_at = ""
             if (series.length > 0) {
                 updated_at = series[0].dateTime_str
             }
-            console.log('updated_at', updated_at)
-            /*this.db.collection("companies").updateOne({_id: company_id}, {
-                $set: {
-                    // analysis_result: analysis_result,
-                    updated_at
-                }
-            })*/
             this.db.collection("analysis_result").updateOne({_id: company_id + '_' + updated_at}, {
                 $set: {
                     analysis_result: analysis_result,
